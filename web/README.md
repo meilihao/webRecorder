@@ -25,3 +25,4 @@ videoRecorder.bitsPerSecond = 12800;
 1. [Web Audio API 初识](https://github.com/o2team/H5Skills/issues/64)
 1. [recorder.js](https://wangpengfei15974.github.io/recorder.js/)
 1. [html5录音](https://www.jianshu.com/p/1b90743386b2)
+1. [HTML5录音控件](https://www.cnblogs.com/xiaoqi/p/6993912.html)

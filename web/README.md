@@ -1,4 +1,11 @@
 # README
+web端录音并上传.
+
+## 特点
+1. 支持截取音频开头的空白
+
+## 浏览器支持
+chrome
 
 ## 备忘
 1. [navigator.getUserMedia已更名为MediaDevices.getUserMedia](https://developer.mozilla.org/zh-CN/docs/Web/API/Navigator/getUserMedia)

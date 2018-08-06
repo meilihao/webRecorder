@@ -23,3 +23,5 @@ videoRecorder.bitsPerSecond = 12800;
 ## 参考
 1. [https://github.com/mdn/web-dictaphone](https://github.com/mdn/web-dictaphone)
 1. [Web Audio API 初识](https://github.com/o2team/H5Skills/issues/64)
+1. [recorder.js](https://wangpengfei15974.github.io/recorder.js/)
+1. [html5录音](https://www.jianshu.com/p/1b90743386b2)

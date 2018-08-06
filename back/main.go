@@ -97,6 +97,7 @@ func ConvertWAV(webmPath, wavPah string) error {
 	}
 
 	cmd.Args = []string{ffmpegLP, "-i", webmPath, "-y",
+		"-af", "silenceremove=1:0:-30dB",
 		"-acodec", "pcm_s16le", "-ac", "1", "-ar", "8000", wavPah}
 
 	output, err := ExecCmdWithError(cmd)

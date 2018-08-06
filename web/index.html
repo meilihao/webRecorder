@@ -143,12 +143,14 @@
         methods: {
             isTypeSupported() {
                 let types = [
+                    "audio/mpeg",
                     "audio/ogg",
                     "audio/wav",
                     "audio/webm",
-                    "audio/webm\;codecs=opus",
+                    "audio/webm;codecs=opus",
                     "audio/webm;codecs=vorbis",
                     "video/webm",
+                    'video/mp4',
                     "video/webm;codecs=vp8",
                     "video/webm;codecs=vp9",
                     "video/webm;codecs=daala",
@@ -158,8 +160,7 @@
                     "video/webm;codecs=vp9,opus",
                     "video/webm;codecs=vp8,vp9,opus",
                     "video/webm;codecs=h264,opus",
-                    "video/webm;codecs=h264,vp9,opus",
-                    "video/mpeg"];
+                    "video/webm;codecs=h264,vp9,opus",];
 
                 types.forEach((value, index) => {
                     this.exts.push({
@@ -192,7 +193,9 @@
                     // vudio.dance()
 
                     // use MediaRecorder
-                    that.recorder = new MediaRecorder(stream) // 不支持wav
+                    that.recorder = new MediaRecorder(stream,{
+                        mimeType : 'audio/webm'
+                    })
 
                     that.recorder.onstop = function (e) {
                         console.log("data available after MediaRecorder.stop() called.");

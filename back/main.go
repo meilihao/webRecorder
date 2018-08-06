@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 
 	"github.com/labstack/echo"
 	"github.com/meilihao/water"
@@ -16,11 +18,18 @@ import (
 )
 
 var sugar *zap.SugaredLogger
+var ffmpegLP string
 
 func init() {
 	logger, _ := zap.NewDevelopment()
 	defer logger.Sync()
 	sugar = logger.Sugar()
+
+	var err error
+	ffmpegLP, err = exec.LookPath("ffmpeg")
+	if err != nil {
+		panic(err)
+	}
 }
 
 func main() {
@@ -59,17 +68,54 @@ func _UploadSound(ctx *water.Context) {
 	}
 
 	tmpHash := md5.Sum(buf.Bytes())
-	id := hex.EncodeToString(tmpHash[:]) + ".wav"
+	id := hex.EncodeToString(tmpHash[:])
 
-	idPath := buildPathFn("sounds", id)
-	err = ioutil.WriteFile(idPath, buf.Bytes(), 0666)
+	webmPath := buildPathFn("sounds", id+".webm")
+	err = ioutil.WriteFile(webmPath, buf.Bytes(), 0666)
 	if err != nil {
+		sugar.Error(err)
 		ctx.Abort(500)
 
 		return
 	}
 
-	ctx.DataJson(idPath)
+	wavPah := buildPathFn("sounds", id+".wav")
+	err = ConvertWAV(webmPath, wavPah)
+	if err != nil {
+		sugar.Error(err)
+		ctx.Abort(500)
+
+		return
+	}
+
+	ctx.DataJson(id + ".wav")
+}
+
+func ConvertWAV(webmPath, wavPah string) error {
+	cmd := &exec.Cmd{
+		Path: ffmpegLP,
+	}
+
+	cmd.Args = []string{ffmpegLP, "-i", webmPath, "-y",
+		"-acodec", "pcm_s16le", "-ac", "1", "-ar", "8000", wavPah}
+
+	output, err := ExecCmdWithError(cmd)
+	if err != nil {
+		sugar.Error(string(output))
+		return err
+	}
+
+	return err
+}
+
+func ExecCmdWithError(c *exec.Cmd) ([]byte, error) {
+	if c.Stderr != nil {
+		return nil, errors.New("exec: Stderr already set")
+	}
+	var b bytes.Buffer
+	c.Stderr = &b
+	err := c.Run()
+	return b.Bytes(), err
 }
 
 var getPathFn = func(tag, id string) string {

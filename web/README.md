@@ -26,3 +26,4 @@ videoRecorder.bitsPerSecond = 12800;
 1. [recorder.js](https://wangpengfei15974.github.io/recorder.js/)
 1. [html5录音](https://www.jianshu.com/p/1b90743386b2)
 1. [HTML5录音控件](https://www.cnblogs.com/xiaoqi/p/6993912.html)
+1. [peaks.js:用于与音频波形交互的JavaScript UI组件, 音频可视化](https://github.com/bbc/peaks.js)

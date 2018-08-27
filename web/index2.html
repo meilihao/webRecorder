@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style>
+        audio {
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        #audio-container {
+            padding: 20px 0;
+        }
+
+        .ui-btn {
+            display: inline-block;
+            padding: 5px 20px;
+            font-size: 14px;
+            line-height: 1.428571429;
+            box-sizing: content-box;
+            text-align: center;
+            border: 1px solid #e8e8e8;
+            border-radius: 3px;
+            color: #555;
+            background-color: #fff;
+            border-color: #e8e8e8;
+            white-space: nowrap;
+            cursor: pointer;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        .ui-btn:hover,
+        .ui-btn.hover {
+            color: #333;
+            text-decoration: none;
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+        }
+
+        .ui-btn:focus,
+        .ui-btn:active {
+            color: #333;
+            outline: 0;
+        }
+
+        .ui-btn.disabled,
+        .ui-btn.disabled:hover,
+        .ui-btn.disabled:active,
+        .ui-btn[disabled],
+        .ui-btn[disabled]:hover,
+        .ui-state-disabled .ui-btn {
+            cursor: not-allowed;
+            background-color: #eee;
+            border-color: #eee;
+            color: #aaa;
+        }
+
+        .ui-btn-primary {
+            color: #fff;
+            background-color: #39b54a;
+            border-color: #39b54a;
+        }
+
+        .ui-btn-primary:hover,
+        .ui-btn-primary.hover {
+            color: #fff;
+            background-color: #16a329;
+            border-color: #16a329;
+        }
+
+        .ui-btn-primary:focus,
+        .ui-btn-primary:active {
+            color: #fff;
+        }
+
+        .ui-btn-primary.disabled:focus {
+            color: #aaa;
+        }
+    </style>
+    <script src="vudio.js"></script>
+    <script src="toWAV.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/vue"></script>
+</head>
+
+<body>
+    <div id="app">
+        <template v-if="enableGetUserMedia">
+            <button id="start" class="ui-btn ui-btn-primary" :disabled="startStatus=='disabled'" @click="startRecord">录音</button>
+            <button id="stop" class="ui-btn ui-btn-primary" :disabled="stopStatus=='disabled'" @click="stopRecord">停止</button>
+            <button id="tryListen" class="ui-btn ui-btn-primary" :disabled="tryListenStatus=='disabled'" @click="tryListen">试听</button>
+
+            <ul id="records">
+                <li v-for="(item, index) in records">
+                    <audio controls controlsList="nodownload" :src="item"></audio>
+                    <button class="ui-btn ui-btn-primary" @click="deleteThisRecord(index)">删除</button>
+                </li>
+            </ul>
+            <canvas id="canvas" width="1024" height="500"></canvas>
+        </template>
+        <div v-show="errMsg">err: {{errMsg}}</div>
+        <br /> 当前浏览器环境:
+        <p>{{ userMediaStatus }}</p>
+        <p>AudioContext:{{ enableAudioContext }}</p>
+        <p>mediaDevices:{{ enableMediaDevices }}</p>
+        <p>getUserMedia:{{ enableGetUserMedia }}</p>
+        <p>UA:{{ ua }}</p>
+        <br /> 支持格式:
+        <ul id="records">
+            <li v-for="(item, index) in exts">
+                <div>{{item.ext}}:{{item.isEnable}}</div>
+            </li>
+        </ul>
+    </div>
+</body>
+<script>
+    new Vue({
+        el: '#app',
+        data: {
+            enableAudioContext: !!window.AudioContext,
+            enableMediaDevices: !!navigator.mediaDevices,
+            enableGetUserMedia: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia),
+            ua: navigator.userAgent,
+
+            errMsg: undefined,
+
+            startStatus: "disabled",
+            stopStatus: "disabled",
+            tryListenStatus: "disabled",
+            recorder: undefined,
+            records: [],
+            exts: [],
+            audioBuffer: undefined,
+            newArrayBuffer: undefined,
+            bufStratTime: 0,
+            bufEndTime: 0,
+        },
+        computed: {
+            userMediaStatus: function () {
+                return this.enableGetUserMedia ? "当前浏览器支持录音功能" : "当前浏览器不支持录音功能"
+            }
+        },
+        methods: {
+            isTypeSupported() {
+                let types = [
+                    "audio/mpeg",
+                    "audio/ogg",
+                    "audio/wav",
+                    "audio/wave",
+                    "audio/webm",
+                    'audio/x-wav',
+                    "audio/webm;codecs=opus",
+                    "audio/webm;codecs=vorbis",
+                    "audio/mp4",
+                    'audio/ogg; codecs=opus',
+                    "video/webm",
+                    'video/mp4',
+                    "video/webm;codecs=vp8",
+                    "video/webm;codecs=vp9",
+                    "video/webm;codecs=daala",
+                    "video/webm;codecs=h264",
+                    "video/webm;codecs=vp8,opus",
+                    "video/webm;codecs=VP8,opus",
+                    "video/webm;codecs=vp9,opus",
+                    "video/webm;codecs=vp8,vp9,opus",
+                    "video/webm;codecs=h264,opus",
+                    "video/webm;codecs=h264,vp9,opus",];
+
+                types.forEach((value, index) => {
+                    this.exts.push({
+                        ext: value,
+                        isEnable: MediaRecorder.isTypeSupported(value),
+                    })
+                })
+            },
+            createRecorder() {
+                let that = this
+                let canvas = document.querySelector('#canvas')
+                let chunks = [];
+                navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+                    that.startStatus = ""
+                    console.log(stream)
+
+                    // var vudio = new Vudio(stream, canvas, {
+                    //     accuracy: 256,
+                    //     width: 1024,
+                    //     height: 200,
+                    //     waveform: {
+                    //         fadeSide: false,
+                    //         maxHeight: 200,
+                    //         verticalAlign: 'middle',
+                    //         horizontalAlign: 'center',
+                    //         color: '#2980b9'
+                    //     }
+                    // })
+                    //
+                    // vudio.dance()
+
+                    // use MediaRecorder
+                    that.recorder = new MediaRecorder(stream, {
+                        mimeType: 'audio/webm',
+                    })
+
+                    console.log(that.recorder.audioBitsPerSecond)
+                    that.recorder.onstop = function (e) {
+                        let canvasCtx = canvas.getContext("2d");
+                        canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+                        console.log("data available after MediaRecorder.stop() called.");
+
+                        let blob = new Blob(chunks, { 'type': 'audio/webm' });
+                        console.log("---chunks", chunks)
+                        console.log("---blob", blob)
+                        chunks = [];
+                        // let audioURL = window.URL.createObjectURL(blob);
+                        // console.log("--au", audioURL
+
+                        let fileReader = new FileReader();
+                        fileReader.onload = function (event) {
+                            let arrayBuffer = event.target.result
+
+                            let ctx = new window.AudioContext()
+
+                            // https://github.com/cwilso/Audio-Buffer-Draw/blob/master/js/audiodisplay.js
+                            ctx.decodeAudioData(arrayBuffer).then(function (decodedData) {
+                                that.audioBuffer = decodedData
+
+                                function drawBuffer(width, height, context, buffer) {
+                                    let data = buffer.getChannelData(0);// https://developer.mozilla.org/zh-CN/docs/Web/API/AudioBuffer PCM数据
+                                    console.log(blob, decodedData, data)
+                                    let step = Math.ceil(data.length / width);
+                                    let amp = height / 2;
+                                    for (let i = 0; i < width; i++) {
+                                        let min = 1.0;
+                                        let max = -1.0;
+                                        for (let j = 0; j < step; j++) {
+                                            let datum = data[(i * step) + j];
+                                            if (datum < min)
+                                                min = datum;
+                                            if (datum > max)
+                                                max = datum;
+                                        }
+                                        context.fillRect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
+                                    }
+                                }
+
+                                drawBuffer(canvas.width, canvas.height, canvasCtx, decodedData);
+                                that.tryListenStatus = ""
+                            });
+                        };
+                        fileReader.readAsArrayBuffer(blob);
+                    }
+
+                    that.recorder.ondataavailable = function (e) {
+                        chunks.push(e.data);
+                    }
+                }).catch(function (err) {
+                    console.log(err)
+                    that.errMsg = err.name
+                });
+            },
+            startRecord() {
+                this.recorder.start()
+                console.log("recorder started");
+                this.startStatus = "disabled"
+                this.tryListenStatus = "disabled"
+                this.stopStatus = ""
+            },
+            stopRecord() {
+                this.recorder.stop()
+                console.log(this.recorder.state);
+                console.log("recorder stopped");
+                this.startStatus = ""
+                this.stopStatus = "disabled"
+            },
+            deleteThisRecord(index) {
+                this.records.splice(index, 1);
+            },
+            tryListen() {//截取音频并试听
+                // try {
+                if (!this.audioBuffer) {
+                    alert("音频不存在")
+                    return
+                }
+
+                this.bufStratTime = 0
+                this.bufEndTime = this.audioBuffer.duration
+
+                console.log(this.bufStratTime, this.bufEndTime, this.audioBuffer.duration)
+                if (!(this.bufStratTime < this.bufEndTime && this.bufEndTime <= this.audioBuffer.duration)) {
+                    alert("截取时间超限")
+                    return
+                }
+
+                // https://github.com/miguelmota/audiobuffer-slice
+
+                let audioCtx = new window.AudioContext()
+
+                let startIndex = this.bufStratTime * this.audioBuffer.sampleRate
+                let endIndex = this.bufEndTime * this.audioBuffer.sampleRate
+                let frameCount = endIndex - startIndex
+
+                let anotherArray = new Float32Array(frameCount)
+                this.audioBuffer.copyFromChannel(anotherArray, 0, startIndex)
+
+                this.newArrayBuffer = audioCtx.createBuffer(1, frameCount, this.audioBuffer.sampleRate);
+                this.newArrayBuffer.copyToChannel(anotherArray, 0, 0);
+
+                // 用于播放AudioBuffer
+                let source = audioCtx.createBufferSource();
+                source.buffer = this.newArrayBuffer
+                source.connect(audioCtx.destination);
+                source.start();
+
+                let wav = audioBufferToWav(this.newArrayBuffer)
+                let blob = new window.Blob([new DataView(wav)], {
+                    type: 'audio/wav'
+                })
+                let formData = new FormData();
+                formData.append('audio', blob);
+                axios.post('http://localhost:8081/sounds',
+                    formData, {
+                        headers: {
+                            'Content-Type': 'multipart/form-data'
+                        }
+                    }
+                ).then(function (resp) {
+                    console.log('SUCCESS!!');
+                    console.log(resp);
+                }).catch(function (err) {
+                    console.log(err);
+                });
+
+                let audioURL = window.URL.createObjectURL(blob);
+
+                this.records.push(audioURL)
+
+                // }
+                // catch (e) {
+                //     console.log(e);
+                // }
+            }
+        },
+        mounted() {
+            this.createRecorder()
+            this.isTypeSupported()
+        }
+    })
+</script>
+
+</html>

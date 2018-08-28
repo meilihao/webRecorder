@@ -11,7 +11,11 @@ web端录音并上传.
 > webm转成AudioBuffer后无法转回去, 且WebAudio API没有encode AudioBuffer的方法.
 
 ## 浏览器支持
-chrome
+chrome audio/webm
+firefox audio/ogg
+
+> chrome限制仅在localhost和https下允许调用getUserMedia
+> 当前example只选择了chrome
 
 ## 备忘
 1. [navigator.getUserMedia已更名为MediaDevices.getUserMedia](https://developer.mozilla.org/zh-CN/docs/Web/API/Navigator/getUserMedia)

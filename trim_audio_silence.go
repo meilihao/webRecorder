@@ -63,6 +63,7 @@ func Silencedetect(originPath string) []float32 {
 		Path: ffmpegPath,
 	}
 
+	// silencedetect参数不好调试, 看自己情况设置
 	cmd.Args = []string{ffmpegPath, "-hide_banner", "-i", originPath,
 		"-af", "silencedetect=noise=-48dB:d=0.04", "-f", "null", "-"}
 

@@ -16,6 +16,10 @@ firefox audio/ogg
 
 > chrome限制仅在localhost和https下允许调用getUserMedia
 > 当前example只选择了chrome
+> **firefox63开始支持webm, 推荐**
+
+## FAQ
+1. MediaRecorder不支持修改采样频率
 
 ## 备忘
 1. [navigator.getUserMedia已更名为MediaDevices.getUserMedia](https://developer.mozilla.org/zh-CN/docs/Web/API/Navigator/getUserMedia)

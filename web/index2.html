@@ -185,6 +185,7 @@
                 let canvas = document.querySelector('#canvas')
                 let chunks = [];
                 // 在音频环境中没有改变采样率的方法, 因为采样率通常是记录设备的采样速率，并且将保持这种状态
+                // AudioContext的样本速率是由浏览器/设备设置的
                 navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
                     that.startStatus = ""
                     console.log(stream)

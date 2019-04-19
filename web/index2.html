@@ -318,13 +318,15 @@
                 source.connect(audioCtx.destination);
                 source.start();
 
+                //let wav = audioBufferToWav(this.newArrayBuffer,{float32:false})
                 let wav = audioBufferToWav(this.newArrayBuffer)
+                console.log(this.newArrayBuffer, wav)
                 let blob = new window.Blob([new DataView(wav)], {
                     type: 'audio/wav'
                 })
                 let formData = new FormData();
                 formData.append('audio', blob);
-                axios.post('http://localhost:8081/sounds',
+                axios.post('http://localhost:8080/sounds_wav',
                     formData, {
                         headers: {
                             'Content-Type': 'multipart/form-data'

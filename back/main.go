@@ -40,10 +40,11 @@ func main() {
 		AllowMethods: []string{echo.GET, echo.POST, echo.DELETE},
 	}))
 	router.Post("/sounds", _UploadSound)
+	router.Post("/sounds_wav", _UploadSoundWAV)
 
 	w := router.Handler()
 
-	if err := water.ListenAndServe(":8081", w); err != nil {
+	if err := w.ListenAndServe(":8080"); err != nil {
 		log.Fatalln(err)
 	}
 }
@@ -87,6 +88,33 @@ func _UploadSound(ctx *water.Context) {
 
 		return
 	}
+
+	ctx.DataJson(id + ".wav")
+}
+
+func _UploadSoundWAV(ctx *water.Context) {
+	file, _, err := ctx.Request.FormFile("audio")
+	if err != nil {
+		sugar.Error(err)
+		ctx.Abort(400)
+
+		return
+	}
+	defer file.Close()
+
+	buf := bytes.NewBuffer(nil)
+	_, err = io.Copy(buf, file)
+	if err != nil {
+		sugar.Error(err)
+		ctx.Abort(400)
+
+		return
+	}
+
+	tmpHash := md5.Sum(buf.Bytes())
+	id := hex.EncodeToString(tmpHash[:])
+
+	ioutil.WriteFile(id+".wav", buf.Bytes(), 0666)
 
 	ctx.DataJson(id + ".wav")
 }
